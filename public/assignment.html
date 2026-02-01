@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Assignment Page</title>
+    <style>
+        body { font-family: sans-serif; background:#f4f4f4; margin:0; }
+        .container { max-width:700px; margin:50px auto; background:white; padding:30px; border-radius:8px; }
+        .student-row { display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; align-items:center; }
+        input { width:60px; padding:5px; }
+        :root { --mnu-maroon: #8b1d22; }
+        nav { background: var(--mnu-maroon); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <nav style="background:#8b1d22; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="courseHeader">Information</span>
+
+        <div id="navRight" style="display:flex; align-items:center;">
+            <span id="uName" style="margin-right:15px; font-weight:bold;"></span>
+            <button onclick="history.back()" style="background:white; color:var(--mnu-maroon); border:none; padding:8px 15px; cursor:pointer; border-radius:4px; font-weight:bold;">Back</button>
+        </div>
+    </nav>
+    <div class="container">
+        <h2 id="taskTitle" class="mnu-maroon"></h2>
+        <p id="description">Instructions: Please complete the task by the deadline.</p>
+        <hr>
+
+        <div id="studentView" style="display:none;">
+            <h3>Your Submission Status</h3>
+            <div style="font-size:24px;">Grade: <span id="myGrade" style="color:green; font-weight:bold;"></span> / 100</div>
+            <p><b>Teacher's Comment:</b> <span id="myComment" style="font-style:italic; color:#555;"></span></p>
+        </div>
+
+        <div id="teacherView" style="display:none;">
+            <h3>Grade Students</h3>
+            <div id="studentList"></div>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const courseId = params.get('courseId');
+        const title = params.get('title');
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+
+        document.getElementById('taskTitle').innerText = title;
+
+        async function init() {
+            const type = params.get('type'); 
+            
+
+            await loadTaskDetails();
+
+
+            if (type === 'Assignment') {
+                if (role === 'admin') {
+                    document.getElementById('teacherView').style.display = 'block';
+                    loadStudents();
+                } else {
+                    document.getElementById('studentView').style.display = 'block';
+                    loadMyGrade();
+                }
+            } else {
+                const info = document.createElement('p');
+                info.innerHTML = "<i>Not graded.</i>";
+                document.querySelector('.container').appendChild(info);
+            }
+        }
+
+        async function loadTaskDetails() {
+            try {
+                const res = await fetch(`/api/courses/${courseId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const course = await res.json();
+                const task = course.content.find(item => item.title === title);
+
+                if (task && task.details) {
+                    document.getElementById('description').innerText = task.details;
+                } else {
+                    document.getElementById('description').innerText = "No specific instructions provided for this task.";
+                }
+            } catch (err) {
+                console.error("Error loading task details:", err);
+            }
+        }
+
+        async function loadMyGrade() {
+            try {
+                const res = await fetch(`/api/enrollments/course/${courseId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const enroll = await res.json();
+                const gradeEntry = enroll.grades.find(g => g.item === title);
+                
+                if (gradeEntry) {
+                    document.getElementById('myGrade').innerText = gradeEntry.score;
+                    document.getElementById('myComment').innerText = gradeEntry.comment || "No feedback provided.";
+                } else {
+                    document.getElementById('myGrade').innerHTML = "<i>Not graded yet</i>";
+                    document.getElementById('myComment').innerText = "Feedback will appear here once graded.";
+                }
+            } catch (err) {
+                console.error("Error loading grade:", err);
+            }
+        }
+
+        async function loadStudents() {
+            try {
+                const res = await fetch(`/api/enrollments/course/${courseId}/students`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
+                const enrollments = await res.json();
+                
+                const listDiv = document.getElementById('studentList');
+                
+                if (!enrollments || enrollments.length === 0) {
+                    listDiv.innerHTML = "<p>No students enrolled in this course.</p>";
+                    return;
+                }
+
+                listDiv.innerHTML = enrollments.map(e => {
+                    const sId = e.student_id._id;
+                    const existingGrade = e.grades?.find(g => g.item === title);
+                    const currentScore = existingGrade ? existingGrade.score : "";
+                    const currentComment = existingGrade ? existingGrade.comment : "";
+
+                    return `
+                        <div class="student-row" style="margin-bottom:20px; padding:15px; border:1px solid #ddd; border-radius:8px;">
+                            <div style="margin-bottom:10px;">
+                                <b>Student:</b> ${e.student_id.name} (${e.student_id.email})
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <!-- THE IDs MUST BE 'score-' and 'comment-' -->
+                                <input type="number" id="score-${sId}" value="${currentScore}" placeholder="0-100" style="width:80px;">
+                                <input type="text" id="comment-${sId}" value="${currentComment}" placeholder="Feedback..." style="flex-grow:1;">
+                                
+                                <button class="btn btn-primary" onclick="submitGrade('${sId}')" style="width:auto; padding:8px 20px;">
+                                    ${existingGrade ? 'Update Grade' : 'Save Grade'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Error loading student list:", err);
+            }
+        }
+
+        async function submitGrade(studentId) {
+            try {
+                const scoreInput = document.getElementById(`score-${studentId}`);
+                const commentInput = document.getElementById(`comment-${studentId}`);
+
+                if (!scoreInput || !commentInput) {
+                    console.error("Could not find input elements for student:", studentId);
+                    return;
+                }
+
+                const score = scoreInput.value;
+                const comment = commentInput.value;
+
+                if (score === "" || score > 100 || score < 0) {
+                    return alert("Please enter a valid score between 0 and 100");
+                }
+
+                const res = await fetch('/api/enrollments/grade', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ 
+                        studentId, 
+                        courseId, 
+                        item: title, 
+                        score, 
+                        comment 
+                    })
+                });
+
+                if (res.ok) {
+                    alert("Grade and feedback saved successfully!");
+                    loadStudents(); 
+                } else {
+                    const errData = await res.json();
+                    alert("Error: " + (errData.message || "Failed to save grade"));
+                }
+            } catch (err) {
+                console.error("Error submitting grade:", err);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
