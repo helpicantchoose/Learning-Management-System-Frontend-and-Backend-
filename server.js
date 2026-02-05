@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.static('public'));
 
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("MNU LMS Database Connected"))
+    .then(() => console.log("LMS Database Connected"))
     .catch(err => console.error(err));
 
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -20,4 +20,5 @@ app.use('/api/enrollments', require('./routes/enrollmentRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
 
