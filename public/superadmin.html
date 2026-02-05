@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>System Administration</title>
-
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
         :root { --mnu-maroon: #8b1d22; }
         body { font-family: sans-serif; background: #f0f2f5; margin: 0; }
@@ -44,6 +44,14 @@
             </select>
             <button class="btn btn-primary" onclick="createUser()">Register User</button>
 
+            <div class="card" style="border-top: 5px solid #c5a059;"> <!-- Gold border for updates -->
+                <h4>Update User Details</h4>
+                <select id="updateUserSelect"><option>Select User...</option></select>
+                <input type="text" id="newName" placeholder="New Full Name (leave empty to keep current)">
+                <input type="password" id="newPass" placeholder="New Password (leave empty to keep current)">
+                <button class="btn btn-primary" style="background:#c5a059;" onclick="updateUser()">Update User</button>
+            </div>
+
             <div class="delete-box">
                 <h4 class="delete-header">Delete Existing User</h4>
                 <select id="deleteUserSelect"><option>Loading Users...</option></select>
@@ -59,6 +67,13 @@
             <label>Assign Instructor:</label>
             <select id="teacherSelect"><option>Loading...</option></select>
             <button class="btn btn-primary" onclick="createCourse()">Create Course</button>
+
+                <div class="card" style="border-top: 5px solid #c5a059;">
+            <h4>Rename Course</h4>
+            <select id="renameCourseSelect"><option>Select Course...</option></select>
+            <input type="text" id="newCourseTitle" placeholder="New Course Title">
+            <button class="btn btn-primary" style="background:#c5a059;" onclick="renameCourse()">Rename Course</button>
+                </div>
 
             <div class="delete-box">
                 <h4 class="delete-header">Delete Existing Course</h4>
@@ -106,36 +121,45 @@
                 });
                 const students = await sRes.json();
                 
-
                 document.getElementById('studentSelect').innerHTML = students.map(s => 
                     `<option value="${s._id}">${s.name}</option>`
                 ).join('');
 
                 const allUsers = [...teachers, ...students];
-                document.getElementById('deleteUserSelect').innerHTML = allUsers.map(u => 
+                const userOptionsHtml = allUsers.map(u => 
                     `<option value="${u._id}">${u.name} (${u.role})</option>`
                 ).join('');
+
+                document.getElementById('deleteUserSelect').innerHTML = userOptionsHtml;
+                document.getElementById('updateUserSelect').innerHTML = userOptionsHtml;
 
                 const cRes = await fetch('/api/courses', { 
                     headers: {'Authorization': `Bearer ${token}`} 
                 });
                 const courses = await cRes.json();
                 
+    
                 const courseOptions = courses.map(c => 
-                    `<option value="${c._id}">${c.title}</option>`
+                    `<option value="${c._id}">${c.title} (Teacher: ${c.teacher_id?.name || 'None'})</option>`
                 ).join('');
-                
+
+                document.getElementById('renameCourseSelect').innerHTML = courseOptions;
                 document.getElementById('courseSelect').innerHTML = courseOptions;
                 document.getElementById('deleteCourseSelect').innerHTML = courseOptions;
+
 
                 const eRes = await fetch('/api/enrollments/manage/all', { 
                     headers: {'Authorization': `Bearer ${token}`} 
                 });
                 const enrollments = await eRes.json();
                 
-                document.getElementById('unenrollSelect').innerHTML = enrollments.map(e => 
-                    `<option value="${e._id}">${e.student_id?.name || 'Unknown'} - ${e.course_id?.title || 'Unknown'}</option>`
-                ).join('');
+                document.getElementById('unenrollSelect').innerHTML = enrollments.map(e => {
+                    const studentName = e.student_id?.name || 'Unknown Student';
+                    const courseTitle = e.course_id?.title || 'Unknown Course';
+                    const teacherName = e.course_id?.teacher_id?.name || 'No Teacher';
+                    
+                    return `<option value="${e._id}">${studentName} enrolled in ${courseTitle} (Teacher: ${teacherName})</option>`;
+                }).join('');
 
             } catch (err) { 
                 console.error("Error in fetchData:", err); 
@@ -187,6 +211,31 @@
                 showStatus("Student Unenrolled");
                 fetchData();
             }
+        }
+
+                async function updateUser() {
+            const id = document.getElementById('updateUserSelect').value;
+            const name = document.getElementById('newName').value;
+            const password = document.getElementById('newPass').value;
+
+            const res = await fetch(`/api/auth/manage/users/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ name, password })
+            });
+            if (res.ok) { showStatus("User Updated!"); fetchData(); }
+        }
+
+        async function renameCourse() {
+            const id = document.getElementById('renameCourseSelect').value;
+            const title = document.getElementById('newCourseTitle').value;
+
+            const res = await fetch(`/api/courses/${id}/rename`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title })
+            });
+            if (res.ok) { showStatus("Course Renamed!"); fetchData(); }
         }
 
         function showStatus(msg) {
