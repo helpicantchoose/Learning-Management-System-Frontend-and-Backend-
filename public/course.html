@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <title>Course Content</title>
     <style>
+        a { color: white; text-decoration: none; font-weight: bold; display: flex; align-items: center; }
         :root { --mnu-maroon: #8b1d22; }
         body { font-family: sans-serif; background: #f4f4f4; margin: 0; }
         nav { background: var(--mnu-maroon); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
@@ -20,7 +22,10 @@
 <body>
 
     <nav style="background:#8b1d22; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-        <span id="courseHeader">Course</span>
+         <a href="index.html">
+                <img src="Untitled.png" alt="Logo" style="height: 40px;"> 
+                <span id="courseHeader">LMS DASHBOARD</span>
+        </a>
 
         <div id="navRight" style="display:flex; align-items:center;">
             <span id="uName" style="margin-right:15px; font-weight:bold;"></span>
@@ -30,6 +35,11 @@
 
 <div class="box">
     <h2 id="courseTitle" style="color:#8b1d22;"></h2>
+    
+    <div id="actionPanel" style="margin-bottom: 20px;">
+        <button id="statsBtn" class="btn-open">
+        </button>
+    </div>
 
     <details open style="margin-bottom: 20px;">
         <summary style="padding:15px; background:#f1f1f1; cursor:pointer; font-weight:bold; border:1px solid #ddd;">
@@ -79,8 +89,8 @@
                     <!-- DELETE BUTTON (Only visible if you are an Admin/Teacher) -->
                     ${role === 'admin' ? `
                         <button onclick="deleteMaterial('${item.title}')" 
-                                style="background:#ff4444; color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:4px; font-weight:bold;">
-                            Delete
+                                style="background:#34393B; color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:4px; font-weight:bold;">
+                            🗑️
                         </button>
                     ` : ''}
                 </div>
@@ -92,6 +102,16 @@
     async function loadCourse() {
         if (!token) { window.location.href = 'login.html'; return; }
         if (role === 'admin' || role === 'superadmin') document.getElementById('teacherPanel').style.display = 'block';
+        const statsBtn = document.getElementById('statsBtn');
+        if (role === 'admin' || role === 'superadmin') {
+            statsBtn.innerHTML = "📊 View Participants & Class Stats";
+            statsBtn.onclick = () => location.href = 'participants.html?id=' + courseId;
+            document.getElementById('teacherPanel').style.display = 'block'; // Show "Add Content" form
+        } else {
+            statsBtn.innerHTML = "📜 View My Grades & Performance";
+            statsBtn.onclick = () => location.href = 'participants.html?id=' + courseId;
+        }
+ 
 
         try {
             const res = await fetch(`/api/courses/${courseId}`, {
