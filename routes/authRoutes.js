@@ -23,5 +23,6 @@ const authController = require('../controllers/authController');
 router.get('/manage/users', protect, superAdminOnly, authController.getUsersByRole);
 
 // ...
+router.patch('/manage/users/:id', protect, superAdminOnly, authController.updateUser);
 router.delete('/manage/users/:id', protect, superAdminOnly, authController.deleteUser);
 module.exports = router;
