@@ -2,12 +2,13 @@
 <html>
 <head>
     <title>Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <style>
         :root { --mnu-maroon: #8b1d22; }
         body { font-family: sans-serif; margin:0; background:#f4f4f4; }
         nav { background: var(--mnu-maroon); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }        
         .container { padding:20px; display:flex; gap:20px; flex-wrap:wrap; }
-        
+        a { color: white; text-decoration: none; font-weight: bold; display: flex; align-items: center; }
       
         .card { 
             background:white; 
@@ -80,7 +81,11 @@
 </head>
 <body>
     <nav style="background:#8b1d22; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-        <span>LMS Dashboard</span>
+         <a href="index.html">
+                <img src="Untitled.png" alt="Logo" style="height: 40px;"> 
+                <span>LMS DASHBOARD</span>
+        </a>
+
         
         <div id="navRight" style="display:flex; align-items:center;">
             <span id="uName" style="margin-right:15px; font-weight:bold;"></span>
