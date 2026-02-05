@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const courseController = require('../controllers/courseController');
 const { protect } = require('../middleware/auth');
+const { superAdminOnly } = require('../middleware/auth');
 
 
 router.get('/', protect, courseController.getAll);
@@ -18,6 +19,7 @@ router.post('/', protect, (req, res, next) => {
 
 router.patch('/:id/content', protect, courseController.addContent);
 router.delete('/:courseId/content/:title', protect, courseController.deleteContent);
-const { superAdminOnly } = require('../middleware/auth');
+router.patch('/:id/rename', protect, superAdminOnly, courseController.renameCourse);
+
 router.delete('/:id', protect, superAdminOnly, courseController.deleteFullCourse);
 module.exports = router;
