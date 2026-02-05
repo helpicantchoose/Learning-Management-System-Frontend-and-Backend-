@@ -24,9 +24,6 @@ exports.getAll = async (req, res) => {
 exports.getById = async (req, res) => {
     try {
         const course = await Course.findById(req.params.id).populate('teacher_id', 'name');
-        console.log("--- Course Data Fetched ---");
-        console.log(course); 
-
         if (!course) return res.status(404).json({ message: "Not found" });
         res.json(course);
     } catch (err) {
@@ -93,6 +90,20 @@ exports.deleteFullCourse = async (req, res) => {
     try {
         await Course.findByIdAndDelete(req.params.id);
         res.json({ message: "Course deleted successfully" });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};
+
+exports.renameCourse = async (req, res) => {
+    try {
+        const { title } = req.body;
+        const updated = await Course.findByIdAndUpdate(
+            req.params.id,
+            { $set: { title: title } }, 
+            { new: true }
+        );
+        res.json(updated);
     } catch (err) {
         res.status(500).json(err);
     }
