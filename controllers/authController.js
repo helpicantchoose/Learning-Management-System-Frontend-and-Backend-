@@ -44,3 +44,20 @@ exports.getUsersByRole = async (req, res) => {
         res.status(500).json(err);
     }
 };
+
+exports.updateUser = async (req, res) => {
+    try {
+        const { name, password } = req.body;
+        const user = await User.findById(req.params.id);
+        
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        if (name) user.name = name;
+        if (password) user.password = password; 
+
+        await user.save(); 
+        res.json({ message: "User updated successfully" });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};
