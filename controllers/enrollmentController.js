@@ -90,7 +90,11 @@ exports.getAllEnrollments = async (req, res) => {
     try {
         const enrollments = await Enrollment.find()
             .populate('student_id', 'name')
-            .populate('course_id', 'title');
+            .populate({
+                path: 'course_id',
+                // DEEP POPULATION: Get teacher name inside the course
+                populate: { path: 'teacher_id', select: 'name' } 
+            });
         res.json(enrollments);
     } catch (err) {
         res.status(500).json(err);
@@ -101,6 +105,67 @@ exports.unenroll = async (req, res) => {
     try {
         await Enrollment.findByIdAndDelete(req.params.id);
         res.json({ message: "Student unenrolled successfully" });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};
+
+exports.getCourseStats = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+
+        const stats = await Enrollment.aggregate([
+            { $match: { course_id: new mongoose.Types.ObjectId(courseId) } },
+            {
+                $addFields: {
+                    studentAverage: { $avg: "$grades.score" },
+                    assignmentsCount: { $size: "$grades" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "student_id",
+                    foreignField: "_id",
+                    as: "studentInfo"
+                }
+            },
+
+            { $unwind: "$studentInfo" },
+
+            {
+                $project: {
+                    _id: 1,
+                    studentName: "$studentInfo.name",
+                    studentEmail: "$studentInfo.email",
+                    average: { $ifNull: [{ $round: ["$studentAverage", 1] }, 0] },
+                    count: "$assignmentsCount"
+                }
+            },
+            
+            { $sort: { studentName: 1 } }
+        ]);
+
+        res.json(stats);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+exports.getStudentCourseStats = async (req, res) => {
+    try {
+        const stats = await Enrollment.aggregate([
+            { $match: { 
+                student_id: new mongoose.Types.ObjectId(req.user.id),
+                course_id: new mongoose.Types.ObjectId(req.params.courseId)
+            }},
+            { $unwind: "$grades" },
+            { $group: { 
+                _id: "$course_id", 
+                avg: { $avg: "$grades.score" } 
+            }}
+        ]);
+        res.json(stats[0] || { avg: 0 });
     } catch (err) {
         res.status(500).json(err);
     }
